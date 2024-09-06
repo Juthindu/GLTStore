@@ -1,0 +1,61 @@
+version: '3.3'
+
+networks:
+  GLTCStore:
+
+volumes:
+  GLTCStore_mysql:
+    name: GLTCStore_mysql_data
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: GLTCStore_nginx_server
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - php
+      - mariadb
+    networks:
+      - GLTCStore
+
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: GLTCStore_php_service
+    volumes:
+      - ./:/var/www
+    networks:
+      - GLTCStore
+
+  mariadb:
+    image: mariadb:10.11.2-jammy
+    container_name: GLTCStore_mariadb_server
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    tty: true
+    volumes:
+      - GLTCStore_mysql:/var/lib/mysql:delegated
+    environment:
+       MARIADB_DATABASE: GLTCStore_db
+       MARIADB_USER: root
+       MARIADB_PASSWORD: root
+       MARIADB_ROOT_PASSWORD: root
+       SERVICE_TAG: dev
+       SERVICE_NAME: GLTCStore_mariadb_service
+    networks:
+      - GLTCStore
+
+  npm:
+    image: node:18.19.0-alpine
+    container_name: GLTCStore_npm_service
+    tty: true
+    volumes:
+      - ./:/var/www
+    networks:
+      - GLTCStore
